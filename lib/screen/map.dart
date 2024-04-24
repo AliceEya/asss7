@@ -1,21 +1,63 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 class MapScreen extends StatefulWidget {
   const MapScreen({super.key});
 
+
+
   @override
   State<MapScreen> createState() => _MapScreenState();
 }
 
+
 final initialPosition = LatLng(15.854909, 120.600655);
 final Set<Marker> markers = {};
-var descController = TextEditingController();
+var descriptionController= TextEditingController();
 late CollectionReference faveplaces = FirebaseFirestore.instance.collection('favorites');
-
 class _MapScreenState extends State<MapScreen> {
+
+
+void Description(LatLng position) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: descriptionController,
+              decoration: const InputDecoration(hintText:'Enter description'),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  child: const Text('Cancel'),
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                ),
+                ElevatedButton(
+                  child: Text('Save'),
+                  onPressed: () {
+                    saveFavorite(position, descriptionController.text);
+                    addMarker(position, descriptionController.text);
+                    Navigator.of(context).pop();
+                    descriptionController.clear();
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
 
 void addMarker(LatLng p, String desc) {
   setState(() {
@@ -24,63 +66,33 @@ void addMarker(LatLng p, String desc) {
         markerId: MarkerId('${p.latitude}-${p.longitude}'),
         position: LatLng(p.latitude, p.longitude),
         infoWindow: InfoWindow(title: 'Favorite', snippet: desc),
-        onTap: () => promptDeleteDialog(p),
+        onTap: () => DeleteDialog(p),
       ),
     );
   });
 }
 
-void promptDescriptionDialog(LatLng position) {
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        content: TextField(
-          controller: descController,
-          decoration: InputDecoration(hintText: 'Enter description'),
-        ),
-        actions: [
-          TextButton(
-            child: Text('Cancel'),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-          ),
-          TextButton(
-            child: Text('Save'),
-            onPressed: () {
-              saveFavoritePlace(position, descController.text);
-              addMarker(position, descController.text);
-              Navigator.of(context).pop();
-              descController.clear();
-            },
-          ),
-        ],
-      );
-    },
-  );
-}
 
-void promptDeleteDialog(LatLng position) {
+void DeleteDialog(LatLng position) {
   showDialog(
     context: context,
     builder: (BuildContext context) {
       return AlertDialog(
-        title: Text('Remove Pinned Location'),
-        content: Text('Do you want to remove this pinned location?'),
+        title: const Text('WARNING!'),
+        content: const Text('Are you sure you want to remove this pinned location?'),
         actions: <Widget>[
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
             },
-            child: Text('Cancel'),
+            child: const Text('Cancel'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () {
-              deleteFavoritePlace('${position.latitude}-${position.longitude}');
+              deleteFavorite('${position.latitude}-${position.longitude}');
               Navigator.of(context).pop();
             },
-            child: Text('Remove'),
+            child: const Text('YES'),
           ),
         ],
       );
@@ -88,7 +100,7 @@ void promptDeleteDialog(LatLng position) {
   );
 }
 
-void deleteFavoritePlace(String markerId) async {
+void deleteFavorite(String markerId) async {
   markers.removeWhere((marker) => marker.markerId.value == markerId);
   setState(() {});
   QuerySnapshot querySnapshot = await faveplaces.where('details.markerId', isEqualTo: markerId).get();
@@ -97,22 +109,26 @@ void deleteFavoritePlace(String markerId) async {
   });
 }
 
-void saveFavoritePlace(LatLng position, String description) {
+void saveFavorite(LatLng position, String description) {
   faveplaces.add({'details': {'latitude': position.latitude, 'longitude': position.longitude, 'description': description, 'markerId': '${position.latitude}-${position.longitude}'}});
 }
 
-void getfaveplaces() async {
+void getfavorite() async {
   QuerySnapshot querySnapshot = await faveplaces.get();
   querySnapshot.docs.forEach((doc) {
-    var details = doc['details'];
-    if (details != null && details is Map<String, dynamic> && details.containsKey('latitude') && details.containsKey('longitude')) {
+    try{
+      var details = doc['details'];
+      if (details != null && details is Map<String, dynamic> && details.containsKey('latitude') && details.containsKey('longitude')) {
       double lat = details['latitude'];
       double lng = details['longitude'];
       LatLng position = LatLng(lat, lng);
       addMarker(position, details['description']);
     } else {
-      print('Invalid location data in Firestore document: ${doc.id}');
+      print('Invalid location data: ${doc.id}');
     }
+  }catch(e){
+    print(e);
+  }  
   });
 }
 
@@ -120,25 +136,28 @@ void getfaveplaces() async {
   void initState() {
     // TODO: implement initState
     super.initState();
-    getfaveplaces();
+    getfavorite();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        centerTitle: true,
-        title: Text("Favorite Places", style: TextStyle(color: Colors.white),),
-        backgroundColor: Colors.lightBlueAccent,
+        title: const Text("My Favorite Places",
+        style: TextStyle(
+          fontSize: 25,
+          color: Colors.white),),
+        backgroundColor: const Color.fromARGB(255, 3, 58, 84),
       ),
       body: SafeArea(
         child: GoogleMap(
-          //myLocationEnabled: true,
-          //myLocationButtonEnabled: true,
-          initialCameraPosition: CameraPosition(target: initialPosition, zoom: 12),
+          initialCameraPosition: CameraPosition(
+          target: initialPosition,
+          zoom: 12
+          ),
           markers: markers,
           onTap: (position) {
-            promptDescriptionDialog(position);
+            Description(position);
           },
           ),
         ),
