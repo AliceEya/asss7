@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "344270484441",
+    "project_id": "eyamaps-1a5f0",
+    "storage_bucket": "eyamaps-1a5f0.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:344270484441:android:63792f42332d1b472edfc8",
+        "android_client_info": {
+          "package_name": "com.example.eya_assignment7"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBqL-fs_pN5Av6dDSFMC02hze6wkNZTk-s"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
